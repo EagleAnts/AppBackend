@@ -1,0 +1,35 @@
+{
+  "name": "smarthomes",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index",
+    "server": "nodemon index",
+    "client": "npm start --prefix client",
+    "format": "prettier --write \"./**/*.{js,jsx}\"",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.12",
+    "prettier": "^2.5.1"
+  },
+  "dependencies": {
+    "axios": "^0.24.0",
+    "bcrypt": "^5.0.1",
+    "concurrently": "^6.2.1",
+    "config": "^3.3.7",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.1.1",
+    "express": "^4.17.1",
+    "express-session": "^1.17.2",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^6.0.12",
+    "socket.io": "^4.4.1",
+    "socket.io-client": "^4.4.1",
+    "uuid": "^8.3.2"
+  }
+}
