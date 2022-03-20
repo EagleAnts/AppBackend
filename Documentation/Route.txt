@@ -1,0 +1,3 @@
+METHOD  ROUTE                   INPUT DATA              OUTPUT DATA                 --->    DESCRIPTION
+
+GET     /                       NONE                    NONE                        --->    USED FOR TESTING THE SERVER'S AVAILABILITY

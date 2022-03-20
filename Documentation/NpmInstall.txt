@@ -1,0 +1,9 @@
+npm install -D nodemon
+npm install cors
+npm install config
+npm install express
+npm install mongoose
+npm install config
+npm install jsonwebtoken
+npm i bcrypt
+npm install crypto-js

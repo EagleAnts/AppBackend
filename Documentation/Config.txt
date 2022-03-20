@@ -1,0 +1,3 @@
+Contains Config Files Used By Config Module.
+These Files Contain the Configuration Parameters.
+It Also Contains a js Database Configuration file used for establishing a connection and configure the database.

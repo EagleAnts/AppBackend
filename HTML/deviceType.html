@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin</title>
+  </head>
+  <body>
+    <form method="post" action="/devicetype">
+      <h1>Login</h1>
+      <label htmlFor="Type">
+        <input type="text" name="type" placeholder="Type" required />
+      </label>
+      <label htmlFor="desc">
+        <input
+          type="text"
+          name="description"
+          placeholder="Description"
+          required
+        />
+      </label>
+      <label htmlFor="icon">
+        <input type="text" name="icon" placeholder="Icon" required />
+      </label>
+      <button className="submit-button">Submit</button>
+    </form>
+  </body>
+</html>
