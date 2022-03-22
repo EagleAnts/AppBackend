@@ -28,8 +28,8 @@
     "express-session": "^1.17.2",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.0.12",
+    "mqtt": "^4.3.7",
     "socket.io": "^4.4.1",
-    "socket.io-client": "^4.4.1",
     "uuid": "^8.3.2"
   }
 }
