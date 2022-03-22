@@ -1,25 +1,15 @@
-/*
-    Main Module
-    This Module is the starting point of our server.
-    It first intializes all the services used by our server.
-    It then Starts the server and listens at the specified port for any requests.
-*/
-
 const cors = require("cors");
-// For Parsing Configuration Information Like, Port No, DB Info ,Etc.
 const config = require("config");
 const express = require("express");
-// Importing DB Configuration Module
-const DB = require("./config/db");
+const connectMongoDB = require("./config/db");
 const app = express();
-// It's Used to get value of the Default Port
-const PORT = config.get("PORT.DEFAULT");
+const PORT = process.env.PORT || 5000;
 const path = require("path");
-// const CA = require("./Function/addAdmin");
-const ADT = require("./Function/addDeviceType");
+const ADT = require("./Helpers/addDeviceType");
 // const flush = require("./Function/flushDB");
+
 // Method used for connecting to the database
-DB();
+connectMongoDB();
 // CA({
 //   name: "Paritosh Chauhan",
 //   email: "pariboy@pari.com",
@@ -28,7 +18,7 @@ DB();
 // Initializes and using cors to control the requests behavior
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
+    origin: ["http://localhost:19006", "http://localhost:3000"],
     methods: ["GET", "POST"],
     credentials: true,
   })
@@ -58,6 +48,7 @@ app.post("/devicetype", (req, res) => {
 });
 // For something to act like a middleware, it should be a function
 // // This function will be called for each Route
+
 app.use("/", require("./Middleware/Authenticate"));
 // app.use("/account/user/login", require("./Routes/Account/User/login"));
 // app.use("/account/user/signup", require("./Routes/Account/User/signup"));
@@ -74,6 +65,7 @@ app.use("/account/admin/login", require("./Routes/Account/Admin/login"));
 // app.use("/device/remove", require("./Device/remove"));
 // app.use("/device/update", require("./Device/update"));
 // app.use("/device/get", require("./Device/get"));
+
 // This function will encrypt everything going out
 // app.use("/", require("./Routes/Middleware/encrypt"));
 
