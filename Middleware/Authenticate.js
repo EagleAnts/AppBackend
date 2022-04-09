@@ -1,4 +1,4 @@
-const jwt = require("jsonwebtoken");
+const { jwtTokenVerify } = require("../Helpers/jwt");
 const config = require("config");
 const crypto = require("crypto");
 
@@ -9,6 +9,7 @@ function rsaDataDecryption(data) {
     passphrase: "",
     padding: crypto.constants.RSA_PKCS1_PADDING,
   };
+
   const decryptedMessage = crypto.privateDecrypt(
     rsaPrivateKey,
     Buffer.from(data, "base64")
@@ -17,43 +18,36 @@ function rsaDataDecryption(data) {
   return JSON.parse(decryptedMessage.toString("utf8"));
 }
 
+function userAuthentication(io) {
+  io.use((socket, next) => {
+    const token = rsaDataDecryption(socket.handshake.auth.token);
+    if (!token) return false;
+    const jwtRes = jwtTokenVerify(token);
+    if (!jwtRes.valid) return false;
+    next();
+  });
+}
+
 module.exports = function (req, res, next) {
-  const paths = [
-    "/account/user/login",
-    "/account/user/signup",
-    "/account/pi/login",
-    "/account/pi/signup",
-    "/account/admin/login",
-    "/devicetype",
-  ];
+  const paths = ["/api/user/login", "/api/user/signup"];
+
   if (!req.headers["x-auth-token"]) {
-    console.log(req);
     if (paths.includes(req.originalUrl)) {
-      if (
-        req.body &&
-        req.method === "POST" &&
-        req.originalUrl != "/account/admin/login" &&
-        req.originalUrl != "/devicetype"
-      )
-        req.body = rsaDataDecryption(req.body.key_data);
+      if (req.body && req.method === "POST")
+        req.body = rsaDataDecryption(req.body.data);
       next();
     } else {
       return res.status(401).json({ msg: "No token, Authorization Denied" });
     }
   } else {
-    try {
-      const token = rsaDataDecryption(req.headers["x-auth-token"]);
-      jwt.verify(token, config.get("JWT.TOKEN_SECRET"), (err, data) => {
-        if (err) {
-          //   console.error(err);
-          return res.status(401).json({ msg: "Token is not valid" });
-        }
-        req.user = data;
-        next();
-      });
-    } catch (err) {
-      console.error("Something wrong with Authentication middleware");
-      res.status(500).json({ msg: "Sever Error" });
-    }
+    const token = rsaDataDecryption(req.headers["x-auth-token"]);
+    const jwtRes = jwtTokenVerify(token);
+    if (jwtRes.valid) {
+      req.user = jwtRes.data;
+      next();
+    } else return res.status(401).json({ msg: jwtRes.msg });
   }
 };
+
+exports.rsaDataDecryption = rsaDataDecryption;
+module.exports.userAuthentication = userAuthentication;

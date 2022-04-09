@@ -4,7 +4,6 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const config = require("config");
 const User = require("../../../Models/User");
-
 /****
  *
  * @route POST api/signup
@@ -13,9 +12,9 @@ const User = require("../../../Models/User");
  */
 
 router.post("/", async (req, res) => {
-  const firstName = firstName ? req.body.firstName.trim() : firstName;
-  const lastName = lastName ? req.body.lastName.trim() : lastName;
-  const email = email ? req.body.email.trim() : email;
+  const firstName = req.body.firstName.trim();
+  const lastName = req.body.lastName.trim();
+  const email = req.body.email.trim();
   const password = req.body.password;
   try {
     if (!(req.body.confirmPassword === password && firstName && email))
@@ -28,7 +27,7 @@ router.post("/", async (req, res) => {
     }
 
     user = new User({
-      name: `${firstName} ${user.lastName}`,
+      name: `${firstName} ${lastName}`,
       email,
       password,
     });
@@ -37,25 +36,24 @@ router.post("/", async (req, res) => {
     user.password = await bcrypt.hash(password, salt);
 
     await user.save();
-    const aesKey = genString(32);
-    const payload = {
-      user: {
-        id: user.id,
-        aesKey,
-      },
-    };
+    // const payload = {
+    //   user: {
+    //     id: user.id,
+    //   },
+    // };
 
-    jwt.sign(
-      payload,
-      config.get("JWT.TOKEN_SECRET"),
-      {
-        expiresIn: "5 days",
-      },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token, msg: "Account Created. Please Login", aesKey });
-      }
-    );
+    // jwt.sign(
+    //   payload,
+    //   config.get("JWT.TOKEN_SECRET"),
+    //   {
+    //     expiresIn: "5 days",
+    //   },
+    //   (err, token) => {
+    //     if (err) throw err;
+    //     res.json({ token, msg: "Account Created. Please Login", aesKey });
+    //   }
+    // );
+    res.json({ msg: "Account Created. Please Login" });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");

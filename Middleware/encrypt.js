@@ -1,13 +1,18 @@
 const CryptoJS = require("crypto-js");
 
 function encryptUserData(req, res) {
-  if (!req.encryptUserData) return res.json({ error: "No Data Returned" });
-  let encryptUserData = req.encryptUserData;
-  var ciphertext = CryptoJS.AES.encrypt(
-    JSON.stringify({ encryptUserData }),
+  console.log("Encrypting Data.. : ", req.encryptUserData);
+  if (!req.encryptUserData)
+    return res
+      .status(400)
+      .json({ errors: [{ msg: "No Data Returned", type: "info" }] });
+  const encryptUserData = req.encryptUserData;
+  const ciphertext = CryptoJS.AES.encrypt(
+    JSON.stringify(encryptUserData),
     req.user.aesKey
   ).toString();
-  res.json({ data: ciphertext });
+
+  res.json(ciphertext);
 }
 
 module.exports = encryptUserData;

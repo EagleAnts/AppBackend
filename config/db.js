@@ -3,7 +3,6 @@
   The Methods available in this module are :
   connectDB = { type : Async }
 */
-
 const mongoose = require("mongoose");
 // For Parsing Configuration Information Like, Port No, DB Info ,Etc.
 const config = require("config");
