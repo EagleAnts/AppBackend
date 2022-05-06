@@ -5,12 +5,14 @@ const { generateJwt } = require("./jwt");
 const { v4: uuidv4 } = require("uuid");
 const { validateUser, validateNoQuotes } = require("./validate");
 const crypto = require("crypto");
+const networkNode = require("./networkNode");
 
 module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
   try {
     let { email, password, rpiusername, rpipassword, rpiname, netDetails } =
       data;
 
+    console.log(netDetails);
     const validationRes = await validateUser({
       email,
       password,
@@ -30,7 +32,13 @@ module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
         errors: [{ msg: "Please Type a valid input" }],
       };
 
-    let pi = await Pi.findOne({ email, name: rpiname });
+    /**
+     *
+     * Storing Pi Details
+     *
+     **/
+
+    let pi = await Pi.findOne({ email, piName: rpiname });
 
     if (pi) {
       return {
@@ -41,17 +49,17 @@ module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
     let passid = uuidv4();
 
     pi = new Pi({
-      email,
-      rpiusername,
-      rpipassword,
-      name: rpiname,
+      userEmail: email,
+      piUsername: rpiusername,
+      piPassword: rpipassword,
+      piName: rpiname,
       password: passid,
       user: [validationRes.user._id],
       netDetails,
     });
 
     const salt = await bcrypt.genSalt(10);
-    pi.rpipassword = await bcrypt.hash(rpipassword, salt);
+    pi.piPassword = await bcrypt.hash(rpipassword, salt);
 
     const piDetails = await pi.save();
     const rpiID = piDetails._id;
@@ -65,6 +73,20 @@ module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
       }
     );
 
+    /****
+     *
+     * Adding raspi to blockchain network
+     *
+     ****/
+
+    const blockchainDetails = await networkNode(rpiID);
+
+    /***
+     *
+     * Returning response
+     *
+     ***/
+
     const payload = {
       email,
       rpiusername,
@@ -73,6 +95,7 @@ module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
 
     return {
       piID: rpiID,
+      networkID: blockchainDetails.networkID,
       passid,
       token: generateJwt(payload).token,
       status: 200,

@@ -16,6 +16,7 @@ router.get("/", async (req, res, next) => {
   // console.log("User Details", req.user);
   try {
     const user = await User.findById(req.user.id).select("-_id name email");
+
     req.encryptUserData = { ...user._doc, id: req.user.id };
 
     next();

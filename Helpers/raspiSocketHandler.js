@@ -26,8 +26,11 @@
 const { connection } = require("../socketHandler");
 const { instrument } = require("@socket.io/admin-ui");
 const { registerRaspberryPi } = require("../Helpers/registerRaspberryPi");
+const User = require("../Models/User");
+const Device = require("../Models/Device");
 const Pi = require("../Models/Pi");
 const bcrypt = require("bcrypt");
+const sessionStore = require("../config/redisSessionStore");
 
 const io = connection();
 const raspiNamespace = io.of("/raspberrypi");
@@ -35,6 +38,18 @@ const raspiNamespace = io.of("/raspberrypi");
 instrument(io, {
   namespaceName: "/raspberrypi",
   auth: false,
+});
+
+User.watch().on("change", async (data) => {
+  console.log(data);
+  const userDetails = await User.findById(data.documentKey._id).populate("pi");
+
+  raspiNamespace.sockets.forEach((el) => {
+    if (el.username === userDetails.name) {
+      console.log("Updating Pis For User", el.username);
+      el.emit("update:pis");
+    }
+  });
 });
 
 async function checkUserAuthentication(userDetails) {
@@ -46,16 +61,16 @@ async function checkUserAuthentication(userDetails) {
     }
 
     let pi = await Pi.findOne({
-      _id: userDetails.rpiID,
+      _id: userDetails.piID,
       rpiusername: username,
     });
     if (!pi) {
       return {
         status: 400,
-        msg: "Invalid Credentials",
+        msg: "Please Enter the Correct Credentials",
       };
     }
-    const passwordMatch = await bcrypt.compare(password, pi.rpipassword);
+    const passwordMatch = await bcrypt.compare(password, pi.piPassword);
     if (!passwordMatch) {
       return {
         status: 400,
@@ -77,8 +92,14 @@ async function checkUserAuthentication(userDetails) {
 //   console.log(`socket ${id} has joined room ${room}`);
 // });
 
-raspiNamespace.on("connection", (socket) => {
+// User.watch().on("change", (data) => {
+//   const updatedPiList = data.updateDescription.updatedFields.pi;
+//   console.log("Line 86", updatedPiList);
+// });
+
+raspiNamespace.on("connection", async (socket) => {
   console.log(socket.handshake.headers);
+  console.log("Client connected on '/raspberrypi' with ID  :", socket.id);
 
   const username = socket.handshake.headers.username;
   socket.username = username;
@@ -86,14 +107,31 @@ raspiNamespace.on("connection", (socket) => {
     console.log(event, args);
   });
 
-  socket.on("send:raspberrypi", (data) => {
-    console.log("Sending Message to Room");
-    socket.to(data.toRoom).emit("recieve", data.msg);
+  socket.on("raspberrypi:send", (data) => {
+    console.log("Sending Message to Pi's Room");
+    socket.to(data.toRoom).emit(data.event, data);
   });
 
-  console.log("Client connected on '/raspberrypi' with ID  :", socket.id);
+  socket.on("raspberrypi:sendPrivately", async (data) => {
+    console.log("Sending Message to Pi Privately");
+    const socketID = await sessionStore.findSession(data.networkID, data.to);
+    socket.to(socketID).emit(data.event, data);
+  });
 
-  socket.on("joinRoom", (room) => {
+  socket.on("raspberrypi:recieve", async (data) => {
+    console.log("Recieving Message From Raspberrypi and Sending it to Clients");
+    socket.to(data.toRoom).emit(data.event, data);
+    if (data.updatedStatus) {
+      // update status in mongodb
+      await Device.findOneAndUpdate(
+        { gpio: data.gpio },
+        { status: data.updatedStatus },
+        { new: true }
+      );
+    }
+  });
+
+  socket.on("join_room", (room) => {
     console.log("Joining Client to Room on '/raspberrypi' ", room);
     socket.join(room);
   });
@@ -109,9 +147,9 @@ raspiNamespace.on("connection", (socket) => {
     const res = await checkUserAuthentication(userDetails);
     console.log(res);
     if (res.status === 200) {
-      console.log("Connecting User to Raspberry Pi Room : ", userDetails.rpiID);
-      if (raspiNamespace.adapter.rooms.has(userDetails.rpiID)) {
-        socket.join(userDetails.rpiID);
+      console.log("Connecting User to Raspberry Pi Room : ", userDetails.piID);
+      if (raspiNamespace.adapter.rooms.has(userDetails.piID)) {
+        socket.join(userDetails.piID);
         res.msg = "Connected to Raspberry Pi Successfully";
         raspiNamespace.sockets.forEach((el) => {
           if (el.username === "raspberrypi") console.log(el.id);
@@ -132,6 +170,6 @@ raspiNamespace.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("Client Disconnected : ", socket.id);
+    console.log("Client Disconnected from /raspberrypi : ", socket.id);
   });
 });

@@ -1,61 +1,55 @@
-const rp = require("request-promise");
+const BlockchainNetwork = require("../Models/BlockchainNetwork");
+const Pi = require("../Models/Pi");
 
-// newNodeUrl 
+async function registerBlockchain(piId) {
+  let network = await BlockchainNetwork.findOne({ count: { $lt: 5 } });
 
-function registerAndBroadcastNode(req, res) {
-  const newNodeUrl = req.body.newNodeUrl;
-  if (Users.networkNodes.indexOf(newNodeUrl) == -1)
-    Users.networkNodes.push(newNodeUrl);
-  const regNodePromises = [];
-  console.log(Users.networkNodes);
-  Users.networkNodes.forEach((networkNodeUrl) => {
-    const requestOptions = {
-      uri: networkNodeUrl + "/register-node",
-      method: "POST",
-      body: { newNodeUrl },
-      json: true,
-    };
+  if (network) {
+    // chain
+    // Selecting piId0 from network or chain
+    // piId0 bc{
+    //   "My":--,
+    //   "piId1":--,
+    //   "piId2":--
+    // }
+    // bc["piID0"] = bc.My
+    // del bc["My"]
+    // emit newnode bc["my"] = []
+    //method 2
+    // network 4
+    // emit for each new node bc["newnodeid"] = []
+    // res network pi
+    // bc{ my : empty, pi : em}
 
-    regNodePromises.push(rp(requestOptions));
-  });
-  Promise.all(regNodePromises)
-    .then((data) => {
-      const requestBulkOptions = {
-        uri: newNodeUrl + "/register-nodes-bulk",
-        method: "POST",
-        body: {
-          allNetworkNodes: [...Users.networkNodes, Users.currentNodeURL],
-        },
-        json: true,
-      };
-      return rp(requestBulkOptions);
-    })
-    .then((data) => {
-      res.json({ note: "New Node Registered Successfully with the Network" });
+    await BlockchainNetwork.findByIdAndUpdate(
+      network._id,
+      { $push: { pi: piId }, $inc: { count: 1 } },
+      {
+        new: true,
+        upsert: true,
+      }
+    );
+  } else {
+    network = await BlockchainNetwork.create({
+      count: 1,
+      pi: [piId],
     });
-};
+    console.log(network);
+  }
 
+  // Adding Blockchain details to Pi
+  if (network) {
+    await Pi.findByIdAndUpdate(
+      piId,
+      { $set: { networkID: network._id } },
+      {
+        new: true,
+        upsert: true,
+      }
+    );
+  }
 
-// function registerNode(req, res) {
-//   const newNodeUrl = req.body.newNodeUrl;
-//   if (
-//     Users.networkNodes.indexOf(newNodeUrl) == -1 &&
-//     Users.currentNodeURL !== newNodeUrl
-//   ) {
-//     Users.networkNodes.push(newNodeUrl);
-//   }
-//   res.json({ note: "New Node Registered Successfully" });
-// };
+  return { networkID: network._id };
+}
 
-// function registerNodesBulk(req, res) {
-//   const allNetworkNodes = req.body.allNetworkNodes;
-//   allNetworkNodes.forEach((newNodeUrl) => {
-//     if (
-//       Users.networkNodes.indexOf(newNodeUrl) == -1 &&
-//       Users.currentNodeURL !== newNodeUrl
-//     ) {
-//       Users.networkNodes.push(newNodeUrl);
-//     }
-//   });
-//   res.json({ note: "Bulk Registered Successfully" });
-// };
+module.exports = registerBlockchain;

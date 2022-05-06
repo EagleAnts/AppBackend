@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@node-redis/json": "^1.0.2",
     "@socket.io/admin-ui": "^0.2.0",
     "@socket.io/mongo-adapter": "^0.1.0",
     "bcrypt": "^5.0.1",
@@ -22,6 +23,7 @@
     "express": "^4.17.3",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.2.7",
+    "redis": "^4.0.6",
     "socket.io": "^4.4.1"
   },
   "devDependencies": {

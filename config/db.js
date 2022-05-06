@@ -12,14 +12,18 @@ const dbUri = config.get("MONGO_DB.MONGO_URI");
 
 // This method is used for establishing a connection with the database
 const connectDB = async () => {
-  try {
-    await mongoose.connect(dbUri);
-    console.log("MongoDB Connected...");
-  } catch (err) {
-    console.error(err.message);
-    // Exit process with failure
-    process.exit(1);
-  }
+  return new Promise(async (resolve, reject) => {
+    try {
+      await mongoose.connect(dbUri);
+      console.log("MongoDB Connected...");
+      resolve(200);
+    } catch (err) {
+      console.error(err.message);
+      // Exit process with failure
+      reject(100);
+      process.exit(1);
+    }
+  });
 };
 
 // This method is used for Setting the Configuration Parameters of the Database

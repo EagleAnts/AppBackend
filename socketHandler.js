@@ -20,16 +20,21 @@ class Socket {
     if (!io) {
       io = new Server(server, {
         cors: {
-          origin: ["http://localhost:3000", "http://localhost:8000"],
+          origin: [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://localhost:19006",
+            "*",
+          ],
         },
         credentials: true,
       });
 
       // io.adapter(createAdapter(mongoCollection));
-
+      require("./Helpers/apiHandler");
       require("./Helpers/clientSocketHandler");
       require("./Helpers/raspiSocketHandler");
-
+      require("./Helpers/blockchainSocketHandler");
       // io.on("connection", (socket) => {
       //   console.log(socket.handshake.address);
       //   console.log("User Connected with ID :", socket.id);

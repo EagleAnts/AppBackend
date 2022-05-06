@@ -13,8 +13,9 @@ function generateJwt(payload, expires = false) {
 }
 function jwtTokenVerify(token) {
   return jwt.verify(token, config.get("JWT.TOKEN_SECRET"), (err, data) => {
+    console.log(data);
     if (err) {
-      // console.error(err);
+      console.error(err);
       return { status: 401, msg: "Token is not valid", valid: false };
     }
     return { status: 200, msg: "Success", valid: true, data };

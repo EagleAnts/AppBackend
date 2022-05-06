@@ -16,7 +16,12 @@ const httpServer = createServer(app);
 // Initializes and using cors to control the requests behavior
 app.use(
   cors({
-    origin: ["http://localhost:19006", "http://localhost:3000", "*"],
+    origin: [
+      "http://localhost:19006",
+      "http://localhost:3000",
+      "*",
+      "exp://if-baa.paritoshpc.homeapp.exp.direct:80",
+    ],
     methods: ["GET", "POST"],
     credentials: true,
   })
@@ -29,9 +34,23 @@ app.use(
   })
 );
 
-// Method used for connecting to the database
+// Connecting to MongoDB
 const connectMongoDB = require("./config/db");
-connectMongoDB();
+connectMongoDB()
+  .then(() => {
+    connectSocket(httpServer);
+  })
+  .catch((err) => {
+    console.log("Error While Connecting to MongoDB Atlas");
+    console.log(err);
+  });
+// Creating Device Types
+// require("./Models/DeviceType");
+
+// Redis Client
+require("./config/redisSessionStore");
+
+// Tells the Server to listen for requests on Specified Port
 
 /***
  * @route GET /
@@ -69,8 +88,6 @@ app.use("/api", require("./Middleware/Authenticate"));
 app.use("/api/user/login", require("./Routes/Account/User/login"));
 app.use("/api/user/signup", require("./Routes/Account/User/signup"));
 
-app.use("/api/user/pi", require("./Routes/PiInfo"));
-
 // app.use("/api/account/admin/login", require("./Routes/Account/Admin/login"));
 
 // app.use("/api/account/pi/login", require("./Routes/Account/Pi/login"));
@@ -92,7 +109,5 @@ app.use("/api/user/pi", require("./Routes/PiInfo"));
 // This function will encrypt everything going out
 app.use("/api", require("./Middleware/encrypt"));
 
-// Tells the Server to listen for requests on Specified Port
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => console.log(`Server Started on PORT ${PORT}`));
-connectSocket(httpServer);
