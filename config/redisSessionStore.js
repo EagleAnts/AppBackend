@@ -1,5 +1,7 @@
 const { createClient } = require("redis");
-const redisClient = createClient({});
+const redisClient = createClient({
+  url: "redis://paritosh:Redis@12@redis-19154.c245.us-east-1-3.ec2.cloud.redislabs.com:19154",
+});
 
 /* abstract */ class SessionStore {
   findSession(networkID) {}
