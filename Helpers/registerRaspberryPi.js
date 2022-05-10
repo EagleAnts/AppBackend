@@ -9,7 +9,7 @@ const networkNode = require("./networkNode");
 
 module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
   try {
-    let { email, password, rpiusername, rpipassword, rpiname, netDetails } =
+    let { email, password, rpiusername, rpipassword, piName, netDetails } =
       data;
 
     console.log(netDetails);
@@ -23,9 +23,9 @@ module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
     if (!validationRes.valid) return validationRes;
     email = validationRes.email;
     rpiusername = rpiusername.trim();
-    rpiname = rpiname.trim();
+    piName = piName.trim();
 
-    if (!(validateNoQuotes(rpiusername) && validateNoQuotes(rpiname)))
+    if (!(validateNoQuotes(rpiusername) && validateNoQuotes(piName)))
       return {
         status: 400,
         valid: false,
@@ -38,7 +38,7 @@ module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
      *
      **/
 
-    let pi = await Pi.findOne({ email, piName: rpiname });
+    let pi = await Pi.findOne({ email, piName });
 
     if (pi) {
       return {
@@ -52,7 +52,7 @@ module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
       userEmail: email,
       piUsername: rpiusername,
       piPassword: rpipassword,
-      piName: rpiname,
+      piName,
       password: passid,
       user: [validationRes.user._id],
       netDetails,
@@ -90,7 +90,7 @@ module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
     const payload = {
       email,
       rpiusername,
-      rpiname,
+      piName,
     };
 
     return {
