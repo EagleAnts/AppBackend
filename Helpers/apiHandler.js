@@ -5,6 +5,8 @@ const Device = require("../Models/Device");
 const Pi = require("../Models/Pi");
 const User = require("../Models/User");
 const { instrument } = require("@socket.io/admin-ui");
+const { v4: uuidv4 } = require("uuid");
+const { default: mongoose } = require("mongoose");
 
 instrument(io, {
   namespaceName: "/api",
@@ -45,6 +47,42 @@ apiNamespace.on("connection", (socket) => {
     );
   });
 
+  socket.on("api:getApiKey", async (data, cb) => {
+    //get an existing API Key
+    const apiKey = (await Pi.findById(data.piID)).apiKey;
+    cb(apiKey);
+  });
+  socket.on("api:genApiKey", async (data, cb) => {
+    //generating API Key
+    const apiKey = uuidv4().replaceAll("-", "");
+    await Pi.findByIdAndUpdate(data.piID, { $set: { apiKey } });
+    cb(apiKey);
+  });
+
+  socket.on("api:addRaspberryPi", async (data, cb) => {
+    console.log(data);
+    const pi = await Pi.findOne({ userEmail: data.email, piName: data.piName });
+    console.log("Got Pi : ", pi);
+
+    if (pi.user.find((el) => el.toString() === data.userID)) {
+      cb({ status: 400, msg: "This Raspberry Pi Already Exists" });
+      return;
+    }
+
+    if (!pi) {
+      cb({ status: 400, msg: "This Raspberry Pi doesn't exists" });
+    } else {
+      if (pi.apiKey !== data.apiKey) {
+        cb({ status: 100, msg: "Please Check the Api Key and Try Again" });
+      } else if (pi.apiKey === data.apiKey) {
+        await User.findByIdAndUpdate(data.userID, { $push: { pi: pi._id } });
+        pi.user.push(data.userID);
+        await pi.save();
+        cb({ status: 200, msg: `Raspberry Pi ${data.piName} is added` });
+      }
+    }
+  });
+
   socket.on("api:getPisAndDevices", async (data, cb) => {
     const piList = (
       await User.findOne({ _id: socket.handshake.headers.userid })
@@ -65,6 +103,12 @@ apiNamespace.on("connection", (socket) => {
         )
         .then((res) => {
           res._doc.piID = res._doc._id;
+          if (
+            res._doc.userEmail !== socket.handshake.headers.email &&
+            res._doc.apiKey
+          ) {
+            delete res._doc.apiKey;
+          }
           delete res._doc._id;
           return res;
         });

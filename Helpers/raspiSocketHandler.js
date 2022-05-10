@@ -98,7 +98,9 @@ async function checkUserAuthentication(userDetails) {
 // });
 
 raspiNamespace.on("connection", async (socket) => {
+  // console.log(socket.handshake);
   console.log(socket.handshake.headers);
+  const DeviceType = socket.handshake.headers.device_type;
   console.log("Client connected on '/raspberrypi' with ID  :", socket.id);
 
   const username = socket.handshake.headers.username;
@@ -106,6 +108,55 @@ raspiNamespace.on("connection", async (socket) => {
   socket.onAny((event, ...args) => {
     console.log(event, args);
   });
+
+  // Create Raspi Room IF Rpi Comes Online
+  socket.on("create_room", (room) => {
+    console.log("Creating Raspi Room With ID : ", room);
+    socket.join(room);
+  });
+
+  // Make All the Connected Clients Join the Raspberry Pi Room
+  if (DeviceType && DeviceType === "raspberrypi") {
+    /**
+     * @type {Array<string>} raspiUsers
+     */
+    const piID = socket.handshake.headers.id;
+    const piDetails = await Pi.findById(piID);
+    const piName = socket.handshake.headers.username.split(":")[0];
+
+    const raspiUsers = piDetails.user;
+    const connectedRaspiUsers = (await raspiNamespace.fetchSockets())
+      .filter((el) => raspiUsers.includes(el.handshake.headers.userid))
+      .map((el) => el.id);
+
+    console.log("Connected Raspi Users  : ", connectedRaspiUsers);
+    connectedRaspiUsers.forEach((el) => {
+      raspiNamespace.in(el).socketsJoin(piID);
+    });
+
+    socket.to(piID).emit("raspberrypi:online", {
+      status: 200,
+      msg: `${piName} is now Online`,
+      data: { piID, piName, totalDevices: piDetails.deviceList.length },
+    });
+  }
+
+  socket.on("raspberrypi:join_room", (data, cb) => {
+    if (raspiNamespace.adapter.rooms.has(data.roomID)) {
+      socket.join(data.roomID);
+      cb({
+        status: 200,
+        msg: `Successfully Connected to Raspberry Pi : ${data.piName}`,
+      });
+    } else {
+      cb({ status: 100, msg: `${data.piName} is currently Offline` });
+    }
+  });
+
+  // socket.on("raspberrypi:leave_room", (data) => {
+  //   console.log("Leaving Room");
+  //   socket.leave(data.roomID);
+  // });
 
   socket.on("raspberrypi:send", (data) => {
     console.log("Sending Message to Pi's Room");
@@ -131,11 +182,6 @@ raspiNamespace.on("connection", async (socket) => {
     }
   });
 
-  socket.on("join_room", (room) => {
-    console.log("Joining Client to Room on '/raspberrypi' ", room);
-    socket.join(room);
-  });
-
   socket.on("register", async (data, cb) => {
     console.log("Registering Raspi on backend....");
     console.log("Got Rpi Details as :", data);
@@ -143,33 +189,44 @@ raspiNamespace.on("connection", async (socket) => {
     cb(res);
   });
 
-  socket.on("join:raspberrypi", async (userDetails, cb) => {
-    const res = await checkUserAuthentication(userDetails);
-    console.log(res);
-    if (res.status === 200) {
-      console.log("Connecting User to Raspberry Pi Room : ", userDetails.piID);
-      if (raspiNamespace.adapter.rooms.has(userDetails.piID)) {
-        socket.join(userDetails.piID);
-        res.msg = "Connected to Raspberry Pi Successfully";
-        raspiNamespace.sockets.forEach((el) => {
-          if (el.username === "raspberrypi") console.log(el.id);
-        });
-        console.log(res);
-      } else {
-        res.status = 404;
-        res.msg = "Raspberry Pi is Currently Offline Please Try again Later!";
-      }
-    }
-
-    cb(res);
-  });
-
-  socket.on("leave:raspberrypi", (data) => {
-    console.log("Leaving Room");
-    socket.leave(data.roomID);
-  });
+  // socket.on("join:raspberrypi", async (userDetails, cb) => {
+  //   const res = await checkUserAuthentication(userDetails);
+  //   console.log(res);
+  //   if (res.status === 200) {
+  //     console.log("Connecting User to Raspberry Pi Room : ", userDetails.piID);
+  //     if (raspiNamespace.adapter.rooms.has(userDetails.piID)) {
+  //       socket.join(userDetails.piID);
+  //       res.msg = "Connected to Raspberry Pi Successfully";
+  //       raspiNamespace.sockets.forEach((el) => {
+  //         if (el.username === "raspberrypi") console.log(el.id);
+  //       });
+  //       console.log(res);
+  //     } else {
+  //       res.status = 404;
+  //       res.msg = "Raspberry Pi is Currently Offline Please Try again Later!";
+  //     }
+  //   }
+  //   cb(res);
+  // });
 
   socket.on("disconnect", () => {
+    if (DeviceType && DeviceType === "raspberrypi") {
+      const piID = socket.handshake.headers.id;
+      const piName = socket.handshake.headers.username.split(":")[0];
+
+      // Send Messages to all Clients and then Clear the Room
+      const informClients = async () => {
+        socket.to(piID).emit("raspberrypi:offline", {
+          piID,
+          piName,
+          msg: `${piName} is now offline`,
+        });
+      };
+
+      informClients().then(() => {
+        raspiNamespace.socketsLeave(piID);
+      });
+    }
     console.log("Client Disconnected from /raspberrypi : ", socket.id);
   });
 });

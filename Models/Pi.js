@@ -20,6 +20,7 @@ const PiSchema = new Schema(
       ref: "BlockchainNetwork",
     },
     user: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    apiKey: { type: String },
     deviceList: [
       {
         type: Schema.Types.ObjectId,
