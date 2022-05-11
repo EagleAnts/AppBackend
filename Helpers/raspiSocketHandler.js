@@ -31,6 +31,7 @@ const Device = require("../Models/Device");
 const Pi = require("../Models/Pi");
 const bcrypt = require("bcrypt");
 const sessionStore = require("../config/redisSessionStore");
+const updateDatabase = require("./updateDatabase");
 
 const io = connection();
 const raspiNamespace = io.of("/raspberrypi");
@@ -100,13 +101,22 @@ async function checkUserAuthentication(userDetails) {
 raspiNamespace.on("connection", async (socket) => {
   // console.log(socket.handshake);
   console.log(socket.handshake.headers);
-  const DeviceType = socket.handshake.headers.device_type;
   console.log("Client connected on '/raspberrypi' with ID  :", socket.id);
 
   const username = socket.handshake.headers.username;
+
+  const DeviceType = socket.handshake.headers.device_type;
+
   socket.username = username;
   socket.onAny((event, ...args) => {
     console.log(event, args);
+  });
+
+  socket.on("raspberrypi:getDevicesStatus", async (data, cb) => {
+    const { deviceList } = await Pi.findById(data.piID)
+      .populate({ path: "deviceList", select: "gpio status" })
+      .select("deviceList -_id");
+    cb(deviceList);
   });
 
   // Create Raspi Room IF Rpi Comes Online
@@ -120,7 +130,22 @@ raspiNamespace.on("connection", async (socket) => {
     /**
      * @type {Array<string>} raspiUsers
      */
+
     const piID = socket.handshake.headers.id;
+
+    const networkID = socket.handshake.headers.networkid;
+
+    await sessionStore.saveSession(networkID, {
+      piID,
+      username,
+      raspiSID: socket.id,
+      connected: true,
+    });
+
+    const userSession = await sessionStore.findSession(networkID, piID);
+
+    console.log("User Session Details : ", userSession);
+
     const piDetails = await Pi.findById(piID);
     const piName = socket.handshake.headers.username.split(":")[0];
 
@@ -165,24 +190,19 @@ raspiNamespace.on("connection", async (socket) => {
 
   socket.on("raspberrypi:sendPrivately", async (data) => {
     console.log("Sending Message to Pi Privately");
-    const { socketID } = await sessionStore.findSession(
+    const { raspiSID } = await sessionStore.findSession(
       data.networkID,
       data.to
     );
-    console.log("Socket ID recieved : ", socketID);
-    raspiNamespace.to(socketID).emit(data.event, data);
+    console.log("Socket ID recieved : ", raspiSID);
+    raspiNamespace.to(raspiSID).emit(data.event, data);
   });
 
   socket.on("raspberrypi:recieve", async (data) => {
     console.log("Recieving Message From Raspberrypi and Sending it to Clients");
     socket.to(data.toRoom).emit(data.event, data);
-    if (data.updatedStatus) {
-      // update status in mongodb
-      await Device.findOneAndUpdate(
-        { gpio: data.gpio },
-        { status: data.updatedStatus },
-        { new: true }
-      );
+    if (data.dbUpdate) {
+      updateDatabase[data.dbUpdateEvent](data);
     }
   });
 

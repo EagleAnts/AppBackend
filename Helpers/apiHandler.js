@@ -22,14 +22,6 @@ apiNamespace.on("connection", (socket) => {
     console.log(event, args, " from :  ", socket.handshake.headers.username);
   });
 
-  socket.on("api:toggleStatus", async (data, cb) => {
-    Device.findByIdAndUpdate(data.deviceID, { $set: { status: data.status } })
-      .then((res) => {
-        cb("Updated Successfully.. ✅");
-      })
-      .catch((err) => console.log(err));
-  });
-
   socket.on("api:editProfile", async (data, cb) => {
     console.log(data);
     User.findByIdAndUpdate(socket.handshake.headers.userid, {

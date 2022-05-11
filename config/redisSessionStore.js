@@ -44,15 +44,22 @@ class RedisSessionStore extends SessionStore {
     );
     return connectedClients;
   }
-  async saveSession(networkID, { piID, socketID, username, connected }) {
+  async saveSession(networkID, { piID, username, raspiSID, connected }) {
     const networkDetails = (await this.redisClient.json.get(networkID)) || {};
     networkDetails[piID] = {
       username,
-      socketID,
+      raspiSID,
+      blockchainSID: null,
       connected,
     };
     return await redisClient.json.set(networkID, "$", networkDetails);
   }
+
+  async udpateSession(networkID, piID, path, newValue) {
+    console.log("Updating Session");
+    await redisClient.json.set(networkID, `$.${piID}.${path}`, newValue);
+  }
+
   async clearSession(networkID, piID) {
     try {
       await this.redisClient.json.del(networkID, `$.${piID}`);

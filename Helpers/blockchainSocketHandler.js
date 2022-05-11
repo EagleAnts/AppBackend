@@ -1,8 +1,8 @@
 const { connection } = require("../socketHandler");
 const { instrument } = require("@socket.io/admin-ui");
-const sessionStore = require("../config/redisSessionStore");
 const Pi = require("../Models/Pi");
 const BlockchainDetails = require("../Models/BlockchainNetwork");
+const sessionStore = require("../config/redisSessionStore");
 
 const io = connection();
 const blockchainNamespace = io.of("/blockchain");
@@ -13,27 +13,27 @@ instrument(io, {
 });
 
 blockchainNamespace.on("connection", async (socket) => {
-  const username = socket.handshake.headers.username;
   const piID = socket.handshake.headers.id;
+
   const networkID = socket.handshake.headers.networkid;
-
-  await sessionStore.saveSession(networkID, {
-    username,
-    piID,
-    socketID: socket.id,
-    connected: true,
-  });
-
-  const userSession = await sessionStore.findSession(networkID, piID);
-  console.log("User Session Details : ", userSession);
-
-  socket.username = username;
 
   socket.onAny((event, ...args) => {
     console.log(event, args);
   });
 
   console.log("Client connected on '/blockchain' with ID  :", socket.id);
+
+  socket.on("blockchain:setSessionID", async () => {
+    await sessionStore.udpateSession(
+      networkID,
+      piID,
+      "blockchainSID",
+      socket.id
+    );
+
+    const userSession = await sessionStore.findSession(networkID, piID);
+    console.log("User Session Details : ", userSession);
+  });
 
   socket.on("join_room", (room) => {
     console.log("Joining Client to Room on '/blockchain' ", room);
@@ -48,13 +48,13 @@ blockchainNamespace.on("connection", async (socket) => {
      * sent the message first
      */
     try {
-      const { socketID, connected, username } = await sessionStore.findSession(
-        networkID,
-        data.to
-      );
+      const { blockchainSID, connected, username } =
+        await sessionStore.findSession(networkID, data.to);
 
       if (connected) {
-        blockchainNamespace.to(socketID).emit(`${data.event}_recieve`, data);
+        blockchainNamespace
+          .to(blockchainSID)
+          .emit(`${data.event}_recieve`, data);
         cb("Recieved ✅");
       } else {
         cb(`User : ${username.split("-")[0]} is not connected ❌`);
@@ -70,13 +70,11 @@ blockchainNamespace.on("connection", async (socket) => {
      * Sending Private Messages to the Client
      */
     try {
-      const { socketID, connected, username } = await sessionStore.findSession(
-        networkID,
-        data.to
-      );
+      const { blockchainSID, connected, username } =
+        await sessionStore.findSession(networkID, data.to);
 
       if (connected) {
-        blockchainNamespace.to(socketID).emit(data.event, data);
+        blockchainNamespace.to(blockchainSID).emit(data.event, data);
         cb("Sent ✅");
       } else {
         cb(`User : ${username.split(":")[0]} is not connected ❌`);

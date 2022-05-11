@@ -32,8 +32,11 @@ class Socket {
 
       // io.adapter(createAdapter(mongoCollection));
       require("./Helpers/apiHandler");
+
       require("./Helpers/clientSocketHandler");
+
       require("./Helpers/raspiSocketHandler");
+
       require("./Helpers/blockchainSocketHandler");
       // io.on("connection", (socket) => {
       //   console.log(socket.handshake.address);
