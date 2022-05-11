@@ -165,8 +165,12 @@ raspiNamespace.on("connection", async (socket) => {
 
   socket.on("raspberrypi:sendPrivately", async (data) => {
     console.log("Sending Message to Pi Privately");
-    const socketID = await sessionStore.findSession(data.networkID, data.to);
-    socket.to(socketID).emit(data.event, data);
+    const { socketID } = await sessionStore.findSession(
+      data.networkID,
+      data.to
+    );
+    console.log("Socket ID recieved : ", socketID);
+    raspiNamespace.to(socketID).emit(data.event, data);
   });
 
   socket.on("raspberrypi:recieve", async (data) => {

@@ -47,12 +47,14 @@ module.exports.registerRaspberryPi = async function registerRaspberryPi(data) {
       };
     }
     let passid = uuidv4();
+    const apiKey = uuidv4().replaceAll("-", "");
 
     pi = new Pi({
       userEmail: email,
       piUsername: rpiusername,
       piPassword: rpipassword,
       piName,
+      apiKey,
       password: passid,
       user: [validationRes.user._id],
       netDetails,
