@@ -32,6 +32,7 @@ const Pi = require("../Models/Pi");
 const bcrypt = require("bcrypt");
 const sessionStore = require("../config/redisSessionStore");
 const updateDatabase = require("./updateDatabase");
+const client = require("../mqttHandler");
 
 const io = connection();
 const raspiNamespace = io.of("/raspberrypi");
@@ -164,9 +165,18 @@ raspiNamespace.on("connection", async (socket) => {
       msg: `${piName} is now Online`,
       data: { piID, piName, totalDevices: piDetails.deviceList.length },
     });
+
+    // temperature Data
+    client.on("message", function (topic, message) {
+      //Called each time a message is received
+      console.log("Received message:", topic, message.toString());
+      const data = JSON.parse(message);
+      if (data) socket.to(data.roomID).emit("temperature:recieve", data);
+    });
   }
 
   socket.on("raspberrypi:join_room", (data, cb) => {
+    console.log("Joining Client in Room ------>");
     if (raspiNamespace.adapter.rooms.has(data.roomID)) {
       socket.join(data.roomID);
       cb({
@@ -190,12 +200,11 @@ raspiNamespace.on("connection", async (socket) => {
 
   socket.on("raspberrypi:sendPrivately", async (data) => {
     console.log("Sending Message to Pi Privately");
-    const { raspiSID } = await sessionStore.findSession(
-      data.networkID,
-      data.to
-    );
-    console.log("Socket ID recieved : ", raspiSID);
-    raspiNamespace.to(raspiSID).emit(data.event, data);
+    const sessionRes = await sessionStore.findSession(data.networkID, data.to);
+    if (sessionRes) {
+      console.log("Socket ID recieved : ", sessionRes.raspiSID);
+      raspiNamespace.to(sessionRes.raspiSID).emit(data.event, data);
+    }
   });
 
   socket.on("raspberrypi:recieve", async (data) => {
